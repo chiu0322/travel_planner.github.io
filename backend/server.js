@@ -45,6 +45,10 @@ const corsOptions = {
       process.env.CORS_ORIGINS.split(',') : 
       ['http://localhost:3000', 'http://localhost:8000', 'http://127.0.0.1:8000'];
     
+    console.log('CORS Debug - Origin:', origin);
+    console.log('CORS Debug - Allowed Origins:', allowedOrigins);
+    console.log('CORS Debug - CORS_ORIGINS env var:', process.env.CORS_ORIGINS);
+    
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
