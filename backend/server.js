@@ -42,24 +42,31 @@ app.use('/api', limiter);
 const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = process.env.CORS_ORIGINS ? 
-      process.env.CORS_ORIGINS.split(',') : 
+      process.env.CORS_ORIGINS.split(',').map(o => o.trim()) : 
       ['http://localhost:3000', 'http://localhost:8000', 'http://127.0.0.1:8000'];
     
-    console.log('CORS Debug - Origin:', origin);
-    console.log('CORS Debug - Allowed Origins:', allowedOrigins);
-    console.log('CORS Debug - CORS_ORIGINS env var:', process.env.CORS_ORIGINS);
+    console.log('CORS Check - Request Origin:', origin);
+    console.log('CORS Check - Allowed Origins:', allowedOrigins);
+    console.log('CORS Check - Environment CORS_ORIGINS:', process.env.CORS_ORIGINS);
     
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Check if origin is allowed
+    const isAllowed = allowedOrigins.includes(origin);
+    console.log('CORS Check - Is Allowed:', isAllowed);
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
+      console.log('CORS Error - Origin not allowed:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
 };
 
 app.use(cors(corsOptions));
