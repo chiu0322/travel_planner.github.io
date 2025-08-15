@@ -1,7 +1,7 @@
-// API Configuration - Updated for Render deployment
+// API Configuration - RENDER DEPLOYMENT v3
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
   ? 'http://localhost:3000/api' 
-  : 'https://travel-planner-github-io.onrender.com/api'; // Your Render backend URL
+  : 'https://travel-planner-github-io.onrender.com/api'; // CORRECT RENDER URL
 
 class TravelPlannerAPI {
   constructor() {
