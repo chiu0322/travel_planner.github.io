@@ -402,6 +402,12 @@ function deleteDay(dayId) {
 
 // Update map markers with day filtering
 function updateMapMarkers() {
+    // Check if Google Maps is loaded
+    if (!map || !google || !google.maps) {
+        console.log('Google Maps not yet loaded, skipping marker update');
+        return;
+    }
+    
     // Clear existing markers
     markers.forEach(marker => marker.setMap(null));
     markers = [];
