@@ -1,10 +1,11 @@
 const CACHE_NAME = 'travel-planner-v1';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/styles.css',
-  '/script.js',
-  '/manifest.json'
+  './',
+  './index.html',
+  './styles.css',
+  './script.js',
+  './api.js',
+  './manifest.json'
 ];
 
 // Install event - cache resources
