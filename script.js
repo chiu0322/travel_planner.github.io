@@ -103,6 +103,9 @@ function initMap() {
 
 // Initialize app event listeners
 function initializeApp() {
+    // Authentication event listeners
+    initializeAuth();
+    
     // Header buttons
     document.getElementById('newTripBtn').addEventListener('click', createNewTrip);
     
@@ -618,6 +621,229 @@ function formatTimestamp(timestamp) {
 window.gm_authFailure = function() {
     alert('Google Maps API authentication failed. Please check your API key.');
 };
+
+// Authentication functionality
+function initializeAuth() {
+    // Check if user is already logged in
+    checkAuthStatus();
+    
+    // Login button
+    document.getElementById('loginBtn').addEventListener('click', () => {
+        document.getElementById('loginModal').style.display = 'block';
+    });
+    
+    // Register button
+    document.getElementById('registerBtn').addEventListener('click', () => {
+        document.getElementById('registerModal').style.display = 'block';
+    });
+    
+    // Logout button
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        logout();
+    });
+    
+    // Login form
+    document.getElementById('loginForm').addEventListener('submit', handleLogin);
+    
+    // Register form
+    document.getElementById('registerForm').addEventListener('submit', handleRegister);
+    
+    // Modal close buttons
+    document.querySelectorAll('.modal .close').forEach(closeBtn => {
+        closeBtn.addEventListener('click', (e) => {
+            e.target.closest('.modal').style.display = 'none';
+        });
+    });
+    
+    // Cancel buttons
+    document.getElementById('cancelLoginBtn').addEventListener('click', () => {
+        document.getElementById('loginModal').style.display = 'none';
+    });
+    
+    document.getElementById('cancelRegisterBtn').addEventListener('click', () => {
+        document.getElementById('registerModal').style.display = 'none';
+    });
+    
+    // Switch between login and register
+    document.getElementById('switchToRegister').addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('loginModal').style.display = 'none';
+        document.getElementById('registerModal').style.display = 'block';
+    });
+    
+    document.getElementById('switchToLogin').addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('registerModal').style.display = 'none';
+        document.getElementById('loginModal').style.display = 'block';
+    });
+    
+    // Close modals when clicking outside
+    window.addEventListener('click', (e) => {
+        const modals = ['loginModal', 'registerModal'];
+        modals.forEach(modalId => {
+            const modal = document.getElementById(modalId);
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    });
+}
+
+// Check authentication status
+function checkAuthStatus() {
+    if (window.travelAPI && window.travelAPI.isAuthenticated()) {
+        showUserSection();
+        loadUserTravelPlans();
+    } else {
+        showAuthSection();
+    }
+}
+
+// Show authenticated user section
+function showUserSection() {
+    document.getElementById('authSection').style.display = 'none';
+    document.getElementById('userSection').style.display = 'flex';
+    
+    // Get user info if available
+    const userInfo = localStorage.getItem('currentUser');
+    if (userInfo) {
+        const user = JSON.parse(userInfo);
+        document.getElementById('userName').textContent = user.name || user.email;
+    }
+}
+
+// Show authentication section
+function showAuthSection() {
+    document.getElementById('authSection').style.display = 'flex';
+    document.getElementById('userSection').style.display = 'none';
+}
+
+// Handle login form submission
+async function handleLogin(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    try {
+        const response = await window.travelAPI.login({ email, password });
+        
+        if (response.success) {
+            // Store user info
+            localStorage.setItem('currentUser', JSON.stringify(response.data.user));
+            
+            // Close modal and update UI
+            document.getElementById('loginModal').style.display = 'none';
+            showUserSection();
+            
+            // Sync any local data
+            await window.travelAPI.syncLocalData();
+            loadUserTravelPlans();
+            
+            alert('Login successful!');
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        alert('Login failed: ' + error.message);
+    }
+}
+
+// Handle register form submission
+async function handleRegister(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('registerName').value;
+    const email = document.getElementById('registerEmail').value;
+    const password = document.getElementById('registerPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (password !== confirmPassword) {
+        alert('Passwords do not match!');
+        return;
+    }
+    
+    try {
+        const response = await window.travelAPI.register({ name, email, password });
+        
+        if (response.success) {
+            // Store user info
+            localStorage.setItem('currentUser', JSON.stringify(response.data.user));
+            
+            // Close modal and update UI
+            document.getElementById('registerModal').style.display = 'none';
+            showUserSection();
+            
+            // Sync any local data
+            await window.travelAPI.syncLocalData();
+            
+            alert('Registration successful! Welcome to Travel Planner!');
+        }
+    } catch (error) {
+        console.error('Registration error:', error);
+        alert('Registration failed: ' + error.message);
+    }
+}
+
+// Handle logout
+function logout() {
+    if (confirm('Are you sure you want to logout?')) {
+        window.travelAPI.logout();
+        showAuthSection();
+        
+        // Clear current travel plan or reload default
+        clearAllData();
+    }
+}
+
+// Load user's travel plans
+async function loadUserTravelPlans() {
+    if (!window.travelAPI.isAuthenticated()) return;
+    
+    try {
+        const response = await window.travelAPI.getTravelPlans();
+        if (response.success && response.data.travelPlans.length > 0) {
+            // Load the most recent travel plan
+            const latestPlan = response.data.travelPlans[0];
+            loadTravelPlanFromServer(latestPlan);
+        }
+    } catch (error) {
+        console.error('Error loading travel plans:', error);
+        // Fallback to local storage
+        loadTravelPlan();
+    }
+}
+
+// Load travel plan from server data
+function loadTravelPlanFromServer(planData) {
+    travelPlan = {
+        id: planData._id,
+        title: planData.title || 'My Travel Plan',
+        startDate: planData.startDate ? planData.startDate.split('T')[0] : '',
+        endDate: planData.endDate ? planData.endDate.split('T')[0] : '',
+        days: planData.days.map(day => ({
+            id: day._id || 'day_' + Date.now(),
+            number: day.dayNumber,
+            date: day.date.split('T')[0],
+            locations: day.locations.map(loc => ({
+                id: loc._id || 'loc_' + Date.now(),
+                name: loc.name,
+                address: loc.address,
+                time: loc.time || '',
+                notes: loc.notes || '',
+                lat: loc.coordinates.lat,
+                lng: loc.coordinates.lng
+            })),
+            notes: day.notes || []
+        }))
+    };
+    
+    // Update UI
+    document.getElementById('startDate').value = travelPlan.startDate;
+    document.getElementById('endDate').value = travelPlan.endDate;
+    document.getElementById('tripTitle').textContent = travelPlan.title;
+    
+    renderDays();
+}
 
 // Global functions (needed for onclick handlers)
 window.openLocationModal = openLocationModal;
